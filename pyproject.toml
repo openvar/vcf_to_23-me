@@ -1,0 +1,38 @@
+[project]
+name = "vcf_to_23andme"
+version = "0.0.1"
+description = "Toolkit that takes a VCF file and converts it to 23andMe format"
+license = {file = "LICENSE.txt"}
+authors = [{name = "VariantValidator Contributors", email = "admin@variantvalidator.org"}]
+readme = "README.md"
+keywords = [
+    "bioinformatics",
+    "DNA Sequence",
+]
+requires-python = ">=3.11"
+
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Build Tools",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Programming Language :: Python :: 3.11"
+]
+
+# Load dependencies
+dependencies = [
+    "pysam==0.23.3",
+    "setuptools==80.9.0",
+    "wheel==0.45.1"
+]
+
+
+[tool.setuptools_scm]
+
+[tool.setuptools.packages.find]
+where = ["."]  # Look for packages in the 'root' directory
+include = ["vcf_to_23andme*"]
+
+[build-system]
+requires = ["setuptools>=45", "setuptools_scm[toml]>=6.2", "wheel"]
+build-backend = "setuptools.build_meta"

@@ -1,15 +1,13 @@
-#!/usr/bin/env python3
 """
-Main Script to Trigger VCF Filter Modification, Hard Filtering, and rsID Checking
+Main Script to Trigger VCF Filter Modification, Hard Filtering, rsID Checking,
+and 23andMe-style conversion.
 
-This script acts as an entry point to run three sequential VCF processing steps:
+This script acts as an entry point to run four sequential VCF processing steps:
 
 1. Modify the FILTER field based on sample-level FT (Filter) values and chromosome filtering.
 2. Remove all variants that do not have 'PASS' in the FILTER column (hard filter).
 3. Add missing rsIDs from a dbSNP VCF or remove variants lacking rsIDs.
-
-It is intended for integration into larger pipelines where multiple
-steps/processes are chained together.
+4. Convert the final rsID-checked VCF into a 23andMe-style genotype file.
 
 Usage:
     python main.py <input_dir> <output_dir> <genome_build> sample.vcf
@@ -19,20 +17,12 @@ Arguments:
     output_dir   - Directory where filtered VCF files will be written.
     genome_build - Genome build version, must be either 'GRCh37' or 'GRCh38'.
     sample.vcf   - Filename of the input VCF to process.
-
-This script:
-  - Validates command-line arguments including genome build.
-  - Calls the VCF modification function.
-  - Calls the hard filter function on the modified VCF.
-  - Calls the rsID checking and adding function using dbSNP VCF.
-  - Handles errors gracefully with informative messages.
-  - Prints confirmation messages for pipeline logging.
 """
 
 import sys
 import os
-from modules import update_formatting, hard_filter
-from modules import check_rsIDs  # Assuming check_rsIDs.py is inside modules
+from modules import update_formatting, hard_filter, check_rsIDs, vcf_to_23_and_me
+
 
 def main():
     """
@@ -74,17 +64,13 @@ def main():
         print(f"Hardfiltered VCF file written to: {hardfiltered_vcf_path}")
 
         # --- Step 5: Add/check rsIDs using dbSNP VCF (RefSeq style) ---
-        # dbSNP files are assumed to live in a parallel dbSNP folder replacing 'vcf' in input_dir
-        dbsnp_dir = input_dir.replace(os.sep + "vcf", os.sep + "dbSNP")
-
-        # Select RefSeq dbSNP filename based on genome build
-        if genome_build == "GRCh37":
-            dbsnp_filename = "GCF_000001405.25.gz"  # dbSNP for GRCh37
-        else:  # GRCh38
-            dbsnp_filename = "GCF_000001405.39.gz"  # dbSNP for GRCh38
-
+        dbsnp_dir = input_dir.replace("vcf", "dbSNP")
+        dbsnp_filename = ("Homo_sapiens_assembly19.dbsnplatest.vcf.gz"
+                          if genome_build == "GRCh37"
+                          else "Homo_sapiens_assembly38.dbsnplatest.vcf.gz")
         dbsnp_vcf = os.path.join(dbsnp_dir, dbsnp_filename)
 
+        # Check if dbSNP file exists
         if not os.path.isfile(dbsnp_vcf):
             raise FileNotFoundError(f"dbSNP VCF not found at expected location: {dbsnp_vcf}")
 
@@ -92,16 +78,26 @@ def main():
         print(f"Step 3: Adding/checking rsIDs from dbSNP file: {dbsnp_vcf}")
         check_rsIDs.filter_and_add_rsids(hardfiltered_vcf_path, dbsnp_vcf, rsid_checked_vcf_path)
         print("Step 3 complete: rsID checking and addition finished.")
-        print(f"Final output VCF with rsIDs: {rsid_checked_vcf_path}")
+        print(f"Output VCF with rsIDs: {rsid_checked_vcf_path}")
 
-        # Pipeline complete - you can add more steps here if needed
+        # --- Step 6: Convert rsID-checked VCF to 23andMe-style output ---
+        final_23andme_file = os.path.join(output_dir, f"{sample_name}.23andme.txt")
+        final_input_vcf = os.path.abspath(rsid_checked_vcf_path)  # ensure absolute path
+        final_output_file = os.path.abspath(final_23andme_file)   # ensure absolute path
+        print(f"Step 4: Converting to 23andme file: {final_output_file}")
+        vcf_to_23_and_me.convert_to_23andme(final_input_vcf, final_output_file)
+        print(f"Final output: {final_output_file}")
 
-    except Exception as e:
-        print(f"Pipeline error: {e}")
+
+    except Exception:
+        import traceback
+        traceback.print_exc()
         sys.exit(1)  # Return non-zero exit code to indicate failure
+
 
 if __name__ == "__main__":
     main()
+
 
 # <LICENSE>
 # Copyright (C) 2016-2025 VariantValidator Contributors
@@ -119,3 +115,4 @@ if __name__ == "__main__":
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 # </LICENSE>
+

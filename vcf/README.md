@@ -1,1 +1,1 @@
-# PLace VCF files in this directory
+# PLace VCF files for conversion in this directory

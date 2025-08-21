@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Hard Filter Module for VCF Files
 

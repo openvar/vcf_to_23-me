@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 VCF Filter Modifier Script
 
@@ -10,7 +9,7 @@ already contain 'LowGQ'.
 It also removes any variants that are not on the primary assembly chromosomes
 (i.e., it filters out contigs like ALT, decoy, or random chromosomes).
 
-It also removes the "chr" prefix from chromosomal IDs
+It also adds the "chr" prefix from chromosomal IDs
 
 Usage:
     python modify_filter_vcf.py <input_dir> <output_dir> sample.vcf
@@ -18,12 +17,11 @@ Usage:
 This script can also be imported and used as a module via `run_vcf_filter_modification(...)`.
 """
 
-import sys
 import os
 
-# Set of canonical primary chromosome names WITHOUT the 'chr' prefix.
+# Set of canonical primary chromosome names WITH the 'chr' prefix.
 # Includes autosomes 1-22, sex chromosomes X and Y, and mitochondrial chromosomes M and MT.
-PRIMARY_CHROMOSOMES = {str(i) for i in range(1, 23)} | {"X", "Y", "M", "MT"}
+PRIMARY_CHROMOSOMES = {f"chr{i}" for i in range(1, 23)} | {"chrX", "chrY", "chrM", "chrMT"}
 
 def run_vcf_filter_modification(input_dir, output_dir, vcf_filename):
     """
@@ -82,20 +80,10 @@ def run_vcf_filter_modification(input_dir, output_dir, vcf_filename):
             # Extract the chromosome field (column 1)
             chrom_raw = fields[0]
 
-            # Normalize chromosome name by removing the 'chr' prefix if it exists
+            # Normalize chromosome name by adding the 'chr' prefix if it does not exist
             # For example, 'chr1' becomes '1' to match PRIMARY_CHROMOSOMES set
-            chrom = chrom_raw[3:] if chrom_raw.startswith("chr") else chrom_raw
+            chrom = chrom_raw if chrom_raw.startswith("chr") else f"chr{chrom_raw}"
             fields[0] = chrom
-
-            # Replace X with 23, Y with 34 and M or MT with 25
-            if fields[0].upper() == "X":
-                fields[0] = "23"
-            if fields[0].upper() == "Y":
-                fields[0] = "24"
-            if fields[0].upper() == "MT":
-                fields[0] = "25"
-            if fields[0].upper() == "M":
-                fields[0] = "25"
 
             # Skip variants that are not on primary chromosomes
             # This removes alternate contigs, decoys, and other non-primary sequences
